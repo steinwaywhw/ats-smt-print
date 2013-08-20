@@ -105,7 +105,15 @@ fprint_myintvec_smt {n} (out, iv, n) = let
 		val () = if i > 0 then fprint (out, " ")
 
 		val () = fprint (out, "(* ")
-		val () = fprint_myint (out, x)  (* coefficient *)
+		val _ = 
+			if x >= 0 then fprint_myint (out, x)  (* coefficient *)
+			else let 
+				val () = fprint (out, "(- ")
+				val neg = neg1_myint (x)
+				val () = fprint_myint (out, neg)
+				val () = myint_free (neg)
+				val () = fprint (out, ")")
+			in end
 			
 		val _ = if i > 0 then let       (* variable name for A[1..n] *)
 			val () = fprint (out, " x")
