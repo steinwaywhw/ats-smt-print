@@ -64,8 +64,9 @@ print_constraints_smt {n} {s} (ics, n) = let
 
 				| list_vt_nil () => let (*nothing*) in fold@ ics end
 
-	val out = open_file_exn ("constraint_smt.out", file_mode_a)
+	val out = open_file_exn ("constraint_smt.out", file_mode_w)
 
+	val () = fprint_string (out, "(set-logic QF_LIA)\n")
 	val () = fprint_string (out, "(push)\n")
 	val () = declare_loop (out, n - 1) (* length = n, define x1 ~ x(n-1)*)
 	val () = assert_loop<a> (out, ics, n)
@@ -140,58 +141,51 @@ fprint_icnstr_smt {n} (out, ic, n) = let
 in case+ ic of
 
 	| ICvec (knd, !p_ivec) => let
-		val () = prstr "("
-
-		val () = (case+ knd of
-			|  1 => prstr "="
-			| ~1 => prstr "distinct"
-			|  2 => prstr ">="
-			| ~2 => prstr "<"
-			| _ => fprint_int (out, knd)
-		) : void // end of [val]
-
-		val () = prstr " "
-		val () = fprint_myintvec_smt<a> (out, !p_ivec, n)
-		val () = prstr " 0)"
-
-	in fold@ (ic) end // end of [ICvec]
-
-
-	| ICveclst (knd, !p_ics) => 
-		if icnstrlst_is_cons(!p_ics, n) 
-		then let
 			val () = prstr "("
 
+			val () = (case+ knd of
+				|  1 => prstr "="
+				| ~1 => prstr "distinct"
+				|  2 => prstr ">="
+				| ~2 => prstr "<"
+				| _ => fprint_int (out, knd)
+			) : void // end of [val]
+
+			val () = prstr " "
+			val () = fprint_myintvec_smt<a> (out, !p_ivec, n)
+			val () = prstr " 0)"
+
+		in fold@ (ic) end
+
+	| ICveclst (knd, !p_ics) => 
+		if icnstrlst_is_cons(!p_ics, n) then let
+			val () = prstr "("
 			val () = (
 				case+ knd of
-				| 0 => prstr "and "
-				| 1 => prstr "or "
-				| _ => fprint_int (out, knd)
-				) : void // end of [val]
+					| 0 => prstr "and "
+					| 1 => prstr "or "
+					| _ => fprint_int (out, knd)
+					) : void // end of [val]
 
 			val () = fprint_icnstrlst_smt (out, !p_ics, n)	
-
 			val () = prstr ")"
+
 		in fold@ (ic) end
+
 		else let 
 			val () = (
 				case+ knd of
-				| 0 => fprint (out, "true")
-				| 1 => fprint (out, "false")
-				| _ => fprint_int (out, knd)
-				) : void
+					| 0 => fprint (out, "true")
+					| 1 => fprint (out, "false")
+					| _ => fprint_int (out, knd)
+					) : void
 		in fold@ ic end
-	// end of [ICveclst]
-	
-
 
 	| ICerr _ => let
 			val () = prstr "ICerr("
 			val () = fprint_string (out, "...")
 			val () = prstr ")"
-	  	in
-			fold@ (ic)
-	  	end // end of [ICerr]
+	  	in fold@ (ic) end
 end 
 
 
@@ -200,18 +194,17 @@ implement {a}
 fprint_icnstrlst_smt {n} {s} (out, ics, n) = 
 	if list_vt_length<icnstr(a,n)> (ics) > 0 then
 		case+ ics of
-		| list_vt_cons (!p_ic, !p_ics) => let
-				val () = fprint_icnstr_smt<a> (out, !p_ic, n)
-				val () = fprint (out, " ")
-				val () = fprint_icnstrlst_smt<a> (out, !p_ics, n)
-			in fold@ ics end // end of [list_vt_cons]
+			| list_vt_cons (!p_ic, !p_ics) => let
+					val () = fprint_icnstr_smt<a> (out, !p_ic, n)
+					val () = fprint (out, " ")
+					val () = fprint_icnstrlst_smt<a> (out, !p_ics, n)
+				in fold@ ics end
 
-		| list_vt_nil () => let
-				val () = fprint (out, "nil")
-			in fold@ ics end
+			| list_vt_nil () => let (* nothing *) in fold@ ics end
 
 implement {a}
-icnstrlst_is_cons {n} {s} (ics, n) = case+ ics of
-| list_vt_cons (_, _) => let prval () = fold@ ics in true end
-| list_vt_nil () => let prval () = fold@ ics in false end
+icnstrlst_is_cons {n} {s} (ics, n) = 
+	case+ ics of
+		| list_vt_cons (_, _) => let prval () = fold@ ics in true end
+		| list_vt_nil () => let prval () = fold@ ics in false end
 
